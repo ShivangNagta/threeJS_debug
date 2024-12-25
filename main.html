@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js 3D Camera Controls</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(120deg, #1e3c72, #2a5298); 
+            color: #fff;
+        }
+    
+        canvas {
+            display: block;
+        }
+    
+        #instructions {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(4, 4, 33, 0.9);
+            padding: 20px;
+            border-radius: 10px;
+            color: #ffffff;
+            font-family: Arial, sans-serif;
+            font-size: 18px;
+            text-align: center;
+            z-index: 1;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+            transition: opacity 0.3s ease-in-out;
+            cursor: pointer;
+        }
+    
+        #instructions.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+    
+        #instructions p {
+            margin: 5px 0;
+            line-height: 1.5;
+        }
+    
+        #content {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background-color: rgba(4, 4, 33, 0.9);
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #f5deb3; 
+            font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+            font-size: 14px;
+            z-index: 1;
+        }
+
+        #title {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translate(-50%);
+            background-color: rgba(4, 4, 33, 0.9);
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #f5deb3;
+            font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+            font-size: 14px;
+            z-index: 1;
+        }
+    
+        #content div {
+            margin: 5px 0;
+        }
+    
+        #content div::before {
+            content: "● ";
+            color: #ffcc00;
+        }
+    
+
+        #instructions:hover {
+            background-color: rgba(20, 20, 33, 0.9);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.6);
+        }
+    
+        /* Ensure instructions are styled well on smaller screens */
+        @media (max-width: 600px) {
+            #instructions {
+                font-size: 16px;
+                padding: 15px;
+            }
+    
+            #content {
+                font-size: 12px;
+                padding: 10px;
+            }
+        }
+    </style>
+    
+</head>
+
+<body>
+    <div id="content">
+    </div>
+    <div id="title">
+        <h1>ThreeJS Debugger</h1>
+    </div>
+    <div id="instructions">
+        <p>Click to enter 3D view</p>
+        <p>W/A/S/D: Move | Q/E: Vertical Movement | Mouse: Look Around</p>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three/examples/js/controls/PointerLockControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three/examples/js/loaders/GLTFLoader.min.js"></script>
+    <script>
+        // Scene, Camera, Renderer
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer();
+        renderer.setClearColor(0xADD8E6);  
+        camera.position.set(10, 3, 3);
+        camera.lookAt(0, 0, 0);
+
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xff0000, 1.0);
+        scene.add(ambientLight);
+
+        // const light = new THREE.PointLight( 0xffffff, 1, 100 );
+        // light.position.set( 0, 0, 0 );
+        // scene.add(light)
+
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 2.0);
+        directionalLight.position.set(10, 10, 10);
+        scene.add(directionalLight);
+
+        // Mouse-based rotation
+        const controls = new THREE.PointerLockControls(camera, document.body);
+
+
+        document.getElementById('instructions').addEventListener('click', () => {
+            controls.lock();
+        });
+
+        controls.addEventListener('lock', () => {
+            document.getElementById('instructions').style.display = 'none';
+        });
+
+        controls.addEventListener('unlock', () => {
+            document.getElementById('instructions').style.display = '';
+        });
+
+        // WASD Movement
+        const movement = { forward: false, backward: false, left: false, right: false, up: false, down: false };
+        const moveSpeed = 0.05;
+
+        window.addEventListener('keydown', (event) => {
+            switch (event.key.toLowerCase()) {
+                case 'w': movement.forward = true; break;
+                case 's': movement.backward = true; break;
+                case 'a': movement.left = true; break;
+                case 'd': movement.right = true; break;
+                case 'q': movement.down = true; break;
+                case 'e': movement.up = true; break;
+            }
+        });
+
+        window.addEventListener('keyup', (event) => {
+            switch (event.key.toLowerCase()) {
+                case 'w': movement.forward = false; break;
+                case 's': movement.backward = false; break;
+                case 'a': movement.left = false; break;
+                case 'd': movement.right = false; break;
+                case 'q': movement.down = false; break;
+                case 'e': movement.up = false; break;
+            }
+        });
+
+        // const floorGeometry = new THREE.PlaneGeometry(50, 50);
+        // const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x808080, side: THREE.DoubleSide });
+        // const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+        // floor.rotation.x = -Math.PI / 2;
+        // scene.add(floor);
+
+        // Load 3D Model
+        const loader = new THREE.GLTFLoader();
+        loader.load(
+            'the_cart_before_the_ponies_magicavoxel_bake.glb',
+            (gltf) => {
+                const model = gltf.scene;
+                scene.add(model);
+
+                const box = new THREE.Box3().setFromObject(model);
+                const center = box.getCenter(new THREE.Vector3());
+                const size = box.getSize(new THREE.Vector3());
+                const maxDim = Math.max(size.x, size.y, size.z);
+                const scale = 20 / maxDim;
+                model.scale.set(scale, scale, scale);
+                model.position(center);
+                console.log('Model loaded successfully!');
+            },
+            (xhr) => console.log((xhr.loaded / xhr.total * 100) + '% loaded'),
+            (error) => console.error('An error occurred:', error)
+        );
+
+        const div = document.getElementById('content');
+
+        // Update camera information
+        function updateCameraInfo() {
+            const direction = new THREE.Vector3();
+            camera.getWorldDirection(direction);
+
+            div.innerHTML = `
+        <div>Camera x Position - ${camera.position.x.toFixed(2)}</div>
+        <div>Camera y Position - ${camera.position.y.toFixed(2)}</div>
+        <div>Camera z Position - ${camera.position.z.toFixed(2)}</div>
+        <div>Camera Direction x - ${direction.x.toFixed(2)}</div>
+        <div>Camera Direction y - ${direction.y.toFixed(2)}</div>
+        <div>Camera Direction z - ${direction.z.toFixed(2)}</div>
+    `;
+        }
+
+        // Throttle updates to 200ms
+        let lastUpdate = 0;
+        function throttleUpdate() {
+            const now = performance.now();
+            if (now - lastUpdate > 200) {
+                updateCameraInfo();
+                lastUpdate = now;
+            }
+        }
+
+        function updateCameraPosition() {
+            if (movement.forward) controls.moveForward(moveSpeed);
+            if (movement.backward) controls.moveForward(-moveSpeed);
+            if (movement.left) controls.moveRight(-moveSpeed);
+            if (movement.right) controls.moveRight(moveSpeed);
+            if (movement.up) camera.position.y += moveSpeed;
+            if (movement.down) camera.position.y -= moveSpeed;
+        }
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+
+            throttleUpdate();
+
+            updateCameraPosition();
+            renderer.render(scene, camera);
+        }
+        animate();
+
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+    </script>
+</body>
+
+</html>
